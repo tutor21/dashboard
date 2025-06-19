@@ -2,9 +2,9 @@
   "name": "embed-server",
   "version": "1.0.0",
   "description": "A simple Node.js server to serve embeddable HTML content.",
-  "main": "api/index.js", // Ensure this points to your new file location
+  "main": "api/index.js",
   "scripts": {
-    "start": "node api/index.js" // Ensure this starts your server correctly
+    "start": "node api/index.js"
   },
   "keywords": [
     "node",
