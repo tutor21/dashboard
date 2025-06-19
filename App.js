@@ -1,3 +1,4 @@
+// src/App.js or src/components/Dashboard.js
 import React, { useState, useEffect, useCallback } from 'react';
 
 // Main App Component
@@ -126,7 +127,8 @@ const App = () => {
       return;
     }
 
-    // UPDATED: baseUrl now points to the new Vercel domain
+    // This is the URL where the 'embed-script-content' HTML file is hosted.
+    // This has been updated to your latest Vercel deployment URL.
     const baseUrl = 'https://dashboard-git-main-ferdinands-projects-7ef1f4c3.vercel.app/api/embed.html';
     const url = `${baseUrl}?site=${encodeURIComponent(licenseDomainInput.toLowerCase().trim())}&license=${encodeURIComponent(generatedLicenseString)}`;
 

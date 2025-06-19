@@ -16,37 +16,27 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-// Serve static files from the 'public' directory relative to the project root.
-// This ensures CSS and other assets are served.
-app.use(express.static(path.join(__dirname, '..', 'public')));
-
 // Define a specific route for your embed.html
 app.get('/api/embed.html', (req, res) => {
   const nonce = crypto.randomBytes(16).toString('base64');
 
-  // Define the path to embed.html more explicitly relative to the serverless function's root
-  // When bundled by Vercel with "includeFiles", the file often ends up directly in the function's root,
-  // or a path that mirrors the project root's public/api/embed.html
-  // Let's try directly accessing it relative to the Vercel function's execution environment.
-  // The Vercel build process places 'includeFiles' at a predictable location, often relative to the entry point.
-  // In a serverless environment, files specified in 'includeFiles' typically become available
-  // relative to the function's root directory, which is the directory containing 'index.js'.
-  // So, if 'public/api/embed.html' is included, it might be directly available at 'public/api/embed.html'
-  // *relative to the function's root (which is where api/index.js is)*.
-  // So, the path becomes `process.cwd()` + `public/api/embed.html`
-
+  // Attempting to resolve path relative to the serverless function's location.
+  // When using Vercel, `process.cwd()` is often the directory where the bundled function code is.
+  // And `includeFiles` usually places them relative to the original project root.
   const embedHtmlPath = path.join(process.cwd(), 'public', 'api', 'embed.html');
-  console.log('Attempting to read embed.html from:', embedHtmlPath); // Add logging for debugging
 
-  // Read the embed.html file
+  console.log('Attempting to read embed.html from:', embedHtmlPath); // Log for debugging
+
   fs.readFile(embedHtmlPath, 'utf8', (err, data) => {
     if (err) {
-      console.error('Error reading embed.html:', err);
-      // Log the current working directory and contents to help debug on Vercel
-      console.error('Current working directory:', process.cwd());
-      // console.error('Files in current working directory:', fs.readdirSync(process.cwd()));
-      // console.error('Files in public:', fs.existsSync(path.join(process.cwd(), 'public')) ? fs.readdirSync(path.join(process.cwd(), 'public')) : 'public folder not found');
-      return res.status(500).send('Error loading embeddable content. Check server logs.');
+      console.error('Error reading embed.html at path:', embedHtmlPath, err); // More detailed error log
+      console.error('Current working directory:', process.cwd()); // For Vercel logs
+      // You can uncomment these for more detailed debugging on Vercel logs
+      // try { console.error('Files in CWD:', fs.readdirSync(process.cwd())); } catch (e) { console.error('Could not list CWD files:', e); }
+      // try { console.error('Files in public/api:', fs.readdirSync(path.join(process.cwd(), 'public', 'api'))); } catch (e) { console.error('Could not list public/api files:', e); }
+
+      // Change status to 404 if file is not found, providing a more helpful message
+      return res.status(404).send('Not Found: Embeddable content could not be loaded. Check server logs for details.');
     }
 
     let modifiedHtml = data.replace(/NONCE_PLACEHOLDER/g, nonce);

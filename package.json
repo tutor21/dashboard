@@ -2,15 +2,16 @@
   "name": "embed-server",
   "version": "1.0.0",
   "description": "A simple Node.js server to serve embeddable HTML content.",
-  "main": "server.js",
+  "main": "api/index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node api/index.js"
   },
   "keywords": [
     "node",
     "express",
     "embed",
-    "static"
+    "static",
+    "serverless"
   ],
   "author": "",
   "license": "ISC",
