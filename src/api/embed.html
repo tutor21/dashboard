@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedded Licensed Application</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com" nonce="NONCE_PLACEHOLDER"></script>
+    <!-- Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" nonce="NONCE_PLACEHOLDER">
+    <style nonce="NONCE_PLACEHOLDER">
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* Tailwind gray-100 */
+        }
+        #embed-app-container {
+            width: 100%;
+            min-height: 500px; /* Adjust as needed */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #embed-app-container > div { /* Target the inner app div */
+            width: 100%;
+            max-width: 48rem; /* Equivalent to max-w-4xl from parent app */
+        }
+    </style>
+</head>
+<body>
+    <div id="embed-app-container"></div>
+
+    <!-- React and ReactDOM CDNs -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js" nonce="NONCE_PLACEHOLDER"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" nonce="NONCE_PLACEHOLDER"></script>
+    <!-- Babel CDN for JSX transformation (for development, use build step for production) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" nonce="NONCE_PLACEHOLDER"></script>
+
+    <script type="text/babel" nonce="NONCE_PLACEHOLDER">
+        // This is the React App component that will run when embedded.
+        // It reads license information directly from its own URL query parameters.
+        const App = () => {
+            const [activeLicense, setActiveLicense] = React.useState(null);
+            const [message, setMessage] = React.useState('');
+
+            // Function to decode a license string back to data
+            const decodeLicense = React.useCallback((encodedString) => {
+                try {
+                    const jsonString = atob(encodedString);
+                    return JSON.parse(jsonString);
+                } catch (error) {
+                    console.error('Error decoding license in embedded app:', error);
+                    return null;
+                }
+            }, []);
+
+            React.useEffect(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const embeddedLicenseString = urlParams.get('license');
+                // const embeddedSiteParam = urlParams.get('site'); // Can be used if needed
+
+                let licenseToValidate = null;
+
+                if (embeddedLicenseString) {
+                    licenseToValidate = decodeLicense(embeddedLicenseString);
+                    if (!licenseToValidate) {
+                        setMessage('Embedded license string is invalid.');
+                        return;
+                    }
+                }
+
+                if (licenseToValidate) {
+                    setActiveLicense(licenseToValidate); // Set active license for display
+                    const currentHost = window.location.hostname;
+                    const today = new Date();
+                    const expiry = new Date(licenseToValidate.expiryDate);
+
+                    // Validate domain: allows subdomains or exact match
+                    const isDomainValid = currentHost.endsWith(licenseToValidate.domain) || currentHost === licenseToValidate.domain;
+                    const isExpired = today > expiry;
+
+                    if (!isDomainValid) {
+                        setMessage(`License invalid: This app is licensed for "${licenseToValidate.domain}", but is running on "${currentHost}".`);
+                    } else if (isExpired) {
+                        setMessage(`License expired: This app's license expired on ${licenseToValidate.expiryDate}.`);
+                    } else {
+                        setMessage('License is valid and active!');
+                    }
+                } else {
+                    setMessage('No license provided to the embedded app via URL parameters.');
+                }
+            }, [decodeLicense]);
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-4 font-sans text-gray-800 flex items-center justify-center">
+                    <div className="max-w-4xl w-full bg-white rounded-xl shadow-lg p-6 md:p-8">
+                        <h1 className="text-3xl font-extrabold text-center text-indigo-700 mb-8">
+                            Embedded Licensed Application
+                        </h1>
+
+                        {message && (
+                            <div className={`p-4 mb-6 rounded-lg font-medium ${
+                                message.includes('valid') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                                {message}
+                            </div>
+                        )}
+
+                        <section className="p-6 bg-indigo-50 rounded-lg shadow-inner">
+                            <h2 className="text-2xl font-bold text-indigo-600 mb-4">Application Status</h2>
+                            {activeLicense ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-lg">
+                                    <p>
+                                        <span className="font-semibold">License Key:</span> {activeLicense.key}
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">Licensed Domain:</span>{' '}
+                                        <span className="bg-yellow-100 px-2 py-1 rounded-md">{activeLicense.domain}</span>
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">Expiry Date:</span> {activeLicense.expiryDate}
+                                    </p>
+                                    <p>
+                                        <span className="font-semibold">Generation Date:</span>{' '}
+                                        {activeLicense.generationDate}
+                                    </p>
+                                    <p className="md:col-span-2">
+                                        <span className="font-semibold">Current Host:</span>{' '}
+                                        <span className="bg-blue-100 px-2 py-1 rounded-md">{window.location.hostname}</span>
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-gray-600 italic">No license loaded in this embedded instance.</p>
+                            )}
+                        </section>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the embedded application
+        const container = document.getElementById('embed-app-container');
+        if (container) {
+            const root = ReactDOM.createRoot(container);
+            root.render(React.createElement(App, null)); // No props needed here, App reads from URL
+        } else {
+            console.error('Target container #embed-app-container not found for embedded app.');
+        }
+    </script>
+</body>
+</html>
