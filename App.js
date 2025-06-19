@@ -1,4 +1,3 @@
-// src/App.js or src/components/Dashboard.js
 import React, { useState, useEffect, useCallback } from 'react';
 
 // Main App Component
@@ -127,9 +126,8 @@ const App = () => {
       return;
     }
 
-    // This is the URL where the 'embed-script-content' HTML file is hosted.
-    // This was previously confirmed as 'https://viuflix.online/api/embed.html'.
-    const baseUrl = 'https://viuflix.online/api/embed.html';
+    // UPDATED: baseUrl now points to the new Vercel domain
+    const baseUrl = 'https://dashboard-git-main-ferdinands-projects-7ef1f4c3.vercel.app/api/embed.html';
     const url = `${baseUrl}?site=${encodeURIComponent(licenseDomainInput.toLowerCase().trim())}&license=${encodeURIComponent(generatedLicenseString)}`;
 
     const scriptTag = `<script src="${url}" async></script>`;
@@ -303,7 +301,7 @@ const App = () => {
           <h2 className="text-2xl font-bold text-green-600 mb-4">Generate Embeddable App Script (URL)</h2>
           <p className="text-gray-700 mb-4">
             After generating a license string and specifying the target domain above, click the button below to generate a `&lt;script&gt;` tag.
-            You will need to host the content from the "Embed Script Content (URL Target)" immersive at the URL `https://viuflix.online/api/embed.html` for this embed script to work.
+            You will need to host the content from the "Embed Script Content (URL Target)" immersive at the URL `https://dashboard-git-main-ferdinands-projects-7ef1f4c3.vercel.app/api/embed.html` for this embed script to work.
           </p>
           <button
             onClick={handleGenerateEmbedScript}
