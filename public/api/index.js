@@ -1,20 +1,19 @@
 // api/index.js (formerly server.js)
 const express = require('express');
 const path = require('path');
-const crypto = require('crypto'); // Node.js built-in module for crypto operations
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
-const fs = require('fs'); // Node.js built-in module for file system operations
+const fs = require('fs');
 
 const app = express();
 
 // Basic rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: "Too many requests from this IP, please try again after 15 minutes"
 });
 
-// Apply the rate limiting to all requests
 app.use(limiter);
 
 // Serve static files from the 'public' directory relative to the project root.
@@ -23,28 +22,35 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Define a specific route for your embed.html
 app.get('/api/embed.html', (req, res) => {
-  // Generate a cryptographically strong random nonce
   const nonce = crypto.randomBytes(16).toString('base64');
 
-  // Path to your embed.html file
-  const embedHtmlPath = path.join(__dirname, '..', 'public', 'api', 'embed.html');
+  // Define the path to embed.html more explicitly relative to the serverless function's root
+  // When bundled by Vercel with "includeFiles", the file often ends up directly in the function's root,
+  // or a path that mirrors the project root's public/api/embed.html
+  // Let's try directly accessing it relative to the Vercel function's execution environment.
+  // The Vercel build process places 'includeFiles' at a predictable location, often relative to the entry point.
+  // In a serverless environment, files specified in 'includeFiles' typically become available
+  // relative to the function's root directory, which is the directory containing 'index.js'.
+  // So, if 'public/api/embed.html' is included, it might be directly available at 'public/api/embed.html'
+  // *relative to the function's root (which is where api/index.js is)*.
+  // So, the path becomes `process.cwd()` + `public/api/embed.html`
+
+  const embedHtmlPath = path.join(process.cwd(), 'public', 'api', 'embed.html');
+  console.log('Attempting to read embed.html from:', embedHtmlPath); // Add logging for debugging
 
   // Read the embed.html file
   fs.readFile(embedHtmlPath, 'utf8', (err, data) => {
     if (err) {
       console.error('Error reading embed.html:', err);
-      return res.status(500).send('Error loading embeddable content.');
+      // Log the current working directory and contents to help debug on Vercel
+      console.error('Current working directory:', process.cwd());
+      // console.error('Files in current working directory:', fs.readdirSync(process.cwd()));
+      // console.error('Files in public:', fs.existsSync(path.join(process.cwd(), 'public')) ? fs.readdirSync(path.join(process.cwd(), 'public')) : 'public folder not found');
+      return res.status(500).send('Error loading embeddable content. Check server logs.');
     }
 
-    // Replace the placeholder with the generated nonce
-    // The placeholder in embed.html will be: '<!-- NONCE_PLACEHOLDER -->'
-    // And the script tags will have 'nonce="NONCE_PLACEHOLDER"' which we will replace
     let modifiedHtml = data.replace(/NONCE_PLACEHOLDER/g, nonce);
 
-    // Set Content-Security-Policy header with the dynamic nonce
-    // IMPORTANT: Adjust this CSP to your actual needs.
-    // 'unsafe-inline' is used for styles if you have inline <style> tags.
-    // 'strict-dynamic' allows scripts with the nonce to execute.
     res.setHeader('Content-Security-Policy', `
       default-src 'self';
       script-src 'self' 'nonce-${nonce}' https://unpkg.com https://cdn.tailwindcss.com https://www.gstatic.com;
@@ -56,12 +62,11 @@ app.get('/api/embed.html', (req, res) => {
       base-uri 'self';
       form-action 'self';
       frame-ancestors 'none';
-    `.replace(/\s+/g, ' ').trim()); // Remove extra whitespace
+    `.replace(/\s+/g, ' ').trim());
 
-    res.type('text/html'); // Ensure content type is HTML
+    res.type('text/html');
     res.send(modifiedHtml);
   });
 });
 
-// For Vercel Serverless Functions, you export the app instance.
 module.exports = app;
